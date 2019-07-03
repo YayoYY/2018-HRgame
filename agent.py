@@ -38,7 +38,7 @@ class Robot():
         return action
     
     # 策略迭代算法
-    def pi_iter():
+    def pi_iter(self, n, robot_state, reward_matrix, switch_matrix):
         v = np.zeros(n)
         self.pi = np.zeros_like(reward_matrix) # 4. pi-策略集合
         self.pi[:] = 1/len(self.actions)
@@ -130,7 +130,6 @@ class Human():
             self.watch += 1
             if self.watch >= self.tol:
                 self.T = self.T - 0.1
-        
 
 class Environment():
 
@@ -139,7 +138,9 @@ class Environment():
         self.states = [x for x in range(n)] # 3. states-状态集合
         self.task1_state = 0 # 4. task1_state-任务1状态
         self.task2_state = 15 # 5. task2_state-任务2状态
-        self.state_refresh(n) # 6. human_state-人类状态，7. robot_state-机器人状态
+        self.human_state = 5
+        self.robot_state = 10
+        # self.state_refresh(n) # 6. human_state-人类状态，7. robot_state-机器人状态
         self.reward_matrix = np.zeros((n, m)) # 8. reward_matrix-奖励矩阵
         self.task_count = 0 # 9. task_count-完成任务数量
         self.get_states_xy(n) # 10. states_xy-状态坐标字典
@@ -241,7 +242,8 @@ class Environment():
     
     # 任务完成
     def task_completed(self):
-        if len(set([self.task1_state, self.task2_state, self.human_state, self.robot_state])) == 2:
+        if len(set([self.task1_state, self.human_state, self.robot_state])) == 1 \
+                or len(set([self.task2_state, self.human_state, self.robot_state])) == 1:
             self.task_count += 1
             return True
         return False
