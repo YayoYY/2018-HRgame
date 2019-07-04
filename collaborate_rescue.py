@@ -63,13 +63,13 @@ def collaborate_rescue_1(delta, ita, w):
     step = 0
     while True:
         step += 1
-        if step == 100001:
+        if step == 101:
             break
         # 1. 选择行为
         h_action = h.action_select(env.human_state, env.robot_state, env.task1_state, env.task2_state, env.states_xy)
         r_action = r.ql(16, env.robot_state, env.reward_matrix, env.switch_matrix)
         # 打印：1. 救援情况
-        # pos_image(env)
+        pos_image(env)
         # 打印：2. 机器人本轮策略
         # robot_pi_image(r, env)
         # 打印：3. 行为选择

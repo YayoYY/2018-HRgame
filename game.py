@@ -27,8 +27,8 @@ class Ui_Form(object):
         states = [x for x in range(16)]
         for state, geo in zip(states, geos):
             self.dic_state_geo[state] = geo
-        self.task_count = []
-        self.robot_task_count = []
+        self.task_count = [0]
+        self.robot_task_count = [0]
         self.step = 0
 
 
@@ -282,7 +282,7 @@ class Ui_Form(object):
         # 步数判断
         self.label.setText('%02d' % self.step)
         # 结束条件
-        if self.step == 100:
+        if self.step == 99:
             # 按钮失灵
             self.pushButton.setEnabled(False)
             self.pushButton_2.setEnabled(False)
@@ -301,6 +301,8 @@ class Ui_Form(object):
             result.columns = ['step']
             result['robot_task_count'] = self.robot_task_count
             result['task_count'] = self.robot_task_count
+
+            result.to_csv('result.csv')
 
     def label_ok(self):
         self.label_5.setText("")
