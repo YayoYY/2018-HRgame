@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
 # 计算两个坐标距离
 def dis(s1, s2):
@@ -91,3 +92,20 @@ def get_std(x):
     mean = sum(x)/len(x)
     std = np.power(x-mean, 2).sum()
     return std
+
+# 方差 2
+def get_std_1(x):
+    lst_state = x.split(':')[1:]
+    std = 0
+    for state in lst_state:
+        q_matrix = np.array([[float(x) for x in y.split(',')] for y in state.split('+')])
+        std += np.sum(q_matrix.std(axis=0))
+    return 1/std
+
+# tic检验数
+def tic(y1, y2):
+    N = len(y1)
+    scaler = MinMaxScaler()
+    y1 = scaler.fit_transform(y1.reshape(-1,1))
+    y2 = scaler.fit_transform(y2.reshape(-1,1))
+    return np.sqrt(1/N*np.power(y1-y2, 2).sum()) / (np.sqrt(1/N*np.power(y1, 2).sum()) + np.sqrt(1/N*np.power(y2, 2).sum()))

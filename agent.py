@@ -72,7 +72,7 @@ class Robot():
 class Human():
     
     # 初始化
-    def __init__(self, m, delta, ita, tol):
+    def __init__(self, m, delta, ita):
         self.actions = [x for x in range(m)] # 1. m-行为数
         self.T = 0 # 2. 信任
         self.delta = delta # 3. 信任阈值
@@ -84,7 +84,6 @@ class Human():
         self.pay_matrix_1 = np.array([[10, 0], [-5, 10]]) # 8. 支付矩阵
         self.pay_matrix_2 = np.array([[10, -5], [0, 10]])
         self.watch = 0
-        self.tol = tol
 
     
     # 行为选择
@@ -122,14 +121,13 @@ class Human():
             return None
 
     # 更新信任
-    def social_attribute_update(self, robot_state, task1_state, task2_state):
+    def social_attribute_update(self, robot_state, human_state, task1_state, task2_state):
         if robot_state == task1_state or robot_state == task2_state:
-            self.T = self.T + 0.1
+            self.T = self.T + 0.005
             self.watch = 0
-        else:
-            self.watch += 1
-            if self.watch >= self.tol:
-                self.T = self.T - 0.1
+        elif robot_state == human_state:
+            self.T = self.T + 0.005
+        self.T = self.T - 0.0005
 
 class Environment():
 
