@@ -9,32 +9,78 @@ class Robot():
         self.actions = [x for x in range(m)] # 2. actions-行为集合
         self.pi = {}
         self.q = {}
+        self.action = 0
 
-    # q学习
-    def ql(self, n, robot_state, reward_matrix, switch_matrix):
-        # 获取当前状态下的策略
-        if robot_state in [x for x in self.pi]:
-            pi = self.pi[robot_state]
+    def action_select(self, method, n, robot_state, reward_matrix, switch_matrix):
+        if method == 'q':
+            action = self.ql(n, robot_state, reward_matrix, switch_matrix)
+        elif method == 's':
+            action = self.sarsa(n, robot_state, reward_matrix, switch_matrix)
         else:
+            action = self.pi_iter(n, robot_state, reward_matrix, switch_matrix)
+        return action
+
+    # q与sarsa的区别
+    # https://blog.csdn.net/zong596568821xp/article/details/77968360?locationNum=8&fps=1
+
+    # q学习（西瓜书同款算法）
+    def ql(self, n, robot_state, reward_matrix, switch_matrix):
+        # 获取当前状态下的策略，以及self.q
+        if robot_state not in [x for x in self.pi]:
             self.pi[robot_state] = [1/len(self.actions) for i in range(len(self.actions))]
             self.q[robot_state] = [0 for i in range(len(self.actions))]
+        pi = self.pi[robot_state]
+        # 利用epsilon贪心策略选择动作
         if np.random.rand() < 0.5:
-            action = self.q[robot_state].index(max(self.q[robot_state]))
+            action = np.random.choice([0, 1, 2, 3], p=pi)
         else:
             action = np.random.choice([0, 1, 2, 3])
+        # 获取奖赏、下一状态、下一动作、以及下一动作的奖赏，用来更新当前状态当前动作的q-table
         r = reward_matrix[robot_state, action]
         x_new = switch_matrix[robot_state, action]
         if x_new in [x for x in self.pi]:
-            action_new = self.q[robot_state].index(max(self.q[robot_state]))
+            pi = self.pi[x_new]
+            action_new = np.random.choice([0, 1, 2, 3], p=pi)
             q_new = self.q[x_new][action_new]
         else:
             q_new = 0
+        # 更新当前状态的q-table
         self.q[robot_state][action] = self.q[robot_state][action] + 0.1 * (r + 0.9 * q_new - self.q[robot_state][action])
         self.pi[robot_state] = [0 for x in range(len(self.actions))]
+        # 更新当前状态的策略
         tmp = np.where(np.array(self.q[robot_state]) == max(self.q[robot_state]))
         pro = 1 / tmp[0].size
         for item in tmp[0]:
-            self.q[robot_state][item] = pro
+            self.pi[robot_state][item] = pro
+        return action
+
+    # sarsa学习
+    def sarsa(self, n, robot_state, reward_matrix, switch_matrix):
+        action = self.action
+        # 获取奖赏、下一状态、下一动作、以及下一动作的奖赏，用来更新当前状态当前动作的q-table
+        r = reward_matrix[robot_state, action]
+        x_new = switch_matrix[robot_state, action]
+        if x_new in [x for x in self.pi]:
+            pi = self.pi[x_new]
+            if np.random.rand() < 0.5:
+                action_new = np.random.choice([0, 1, 2, 3], p=pi)
+            else:
+                action_new = np.random.choice([0, 1, 2, 3])
+            q_new = self.q[x_new][action_new]
+        else:
+            action_new = np.random.choice([0, 1, 2, 3])
+            q_new = 0
+        if robot_state not in [x for x in self.pi]:
+            self.pi[robot_state] = [1/len(self.actions) for i in range(len(self.actions))]
+            self.q[robot_state] = [0 for i in range(len(self.actions))]
+        self.q[robot_state][action] = self.q[robot_state][action] + 0.1 * (r + 0.9 * q_new - self.q[robot_state][action])
+        self.pi[robot_state] = [0 for x in range(len(self.actions))]
+        # 更新当前状态的策略
+        tmp = np.where(np.array(self.q[robot_state]) == max(self.q[robot_state]))
+        pro = 1 / tmp[0].size
+        for item in tmp[0]:
+            self.pi[robot_state][item] = pro
+        self.action = action_new
         return action
     
     # 策略迭代算法
@@ -47,7 +93,7 @@ class Robot():
             while True:
                 for i in range(0,  n):
                     v_next[i] = 0.9 * np.dot(self.pi[i],  np.array([v[int(switch_matrix[i][0])], v[int(switch_matrix[i][1])], v[int(switch_matrix[i][2])], v[int(switch_matrix[i][3])]])) + np.dot(self.pi[i], reward_matrix[i])
-                if (np.abs(v_next-v) < 0.002).all():
+                if (np.abs(v_next-v) < 0.02).all():
                     break
                 else:
                     v = v_next
@@ -75,6 +121,8 @@ class Human():
     def __init__(self, m, delta, ita):
         self.actions = [x for x in range(m)] # 1. m-行为数
         self.T = 0 # 2. 信任
+        self.cT = 0
+        self.eT = 0
         self.delta = delta # 3. 信任阈值
         self.ita = ita # 4. 理性指数
         self.robot_b = np.zeros(2) # 5. 机器人信念
@@ -123,11 +171,13 @@ class Human():
     # 更新信任
     def social_attribute_update(self, robot_state, human_state, task1_state, task2_state):
         if robot_state == task1_state or robot_state == task2_state:
-            self.T = self.T + 0.005
+            self.cT = self.cT + 0.005
             self.watch = 0
         elif robot_state == human_state:
-            self.T = self.T + 0.005
-        self.T = self.T - 0.0005
+            self.eT = self.eT + 0.005
+        self.cT = self.cT - 0.00025
+        self.eT = self.eT - 0.00025
+        self.T = self.cT + self.eT
 
 class Environment():
 
